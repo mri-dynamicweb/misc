@@ -41,6 +41,7 @@ strong {
 
 		var numberOfSuccesses = 0;
 		foreach (var template in templates) {
+			if (!CheckInclude(template)) continue;
 			if (!CheckIfCase(template)) continue;
 			if (!CheckIf(template)) continue;
 			numberOfSuccesses++;
@@ -53,6 +54,24 @@ strong {
 		Write(@"</div>
 </body>
 </html>");
+	}
+
+	private bool CheckInclude(TemplateFile template) {
+		var errors = new List<string>();
+
+		var path = template.TemplateFileInfo.FullName;
+		var content = File.ReadAllText(path);
+		var folder = Path.GetDirectoryName(path);
+		var includePattern = new Regex("<!--@Include\\((?<filename>.*?)\\)-->");
+		foreach (Match match in includePattern.Matches(content)) {
+			var includeFilename = match.Groups["filename"].Value;
+			var includeFile = new FileInfo(Path.Combine(folder, includeFilename));
+			if (!includeFile.Exists) {
+				var message = string.Format("Include file \"{0}\" (\"{1}\") not found", includeFilename, GetTemplateLocation(includeFile.FullName));
+				errors.Add(message);
+			}
+		}
+		return ReportErrors(errors, template, content);
 	}
 
 	private bool CheckIfCase(TemplateFile template) {
@@ -133,6 +152,10 @@ strong {
 	}
 
 	private bool ReportErrors(List<string> errors, TemplateFile template, StringBuilder content) {
+		return ReportErrors(errors, template, content.ToString());
+	}
+
+	private bool ReportErrors(List<string> errors, TemplateFile template, string content) {
 		if (errors.Count > 0) {
 			var templateUrl = template.TemplateName;
 			Write("<fieldset>");
@@ -166,15 +189,15 @@ strong {
 		return errors.Count == 0;
 	}
 
-	private string HtmlEncode(object o) {
+	private static string HtmlEncode(object o) {
 		return Server.HtmlEncode(o.ToString());
 	}
 
-	private string UrlEncode(object o) {
+	private static string UrlEncode(object o) {
 		return Server.UrlEncode(o.ToString());
 	}
 
-	private HttpServerUtility Server {
+	private static HttpServerUtility Server {
 		get {
 			return System.Web.HttpContext.Current.Server;
 		}
@@ -239,6 +262,16 @@ strong {
 		foreach (var dir in directory.GetDirectories()) {
 			GetTemplateFiles(dir, collection);
 		}
+	}
+
+	private static string GetTemplateLocation(string path) {
+		var fileInfo = new FileInfo(path);
+		var baseDirectory = Server.MapPath("~/Files/Templates/");
+		var url = fileInfo.FullName;
+		if (fileInfo.FullName.StartsWith(baseDirectory)) {
+			url = fileInfo.FullName.Substring(baseDirectory.Length, fileInfo.FullName.Length-baseDirectory.Length);
+		}
+		return url.Replace('\\', '/');
 	}
 
 	public bool IsReusable {
