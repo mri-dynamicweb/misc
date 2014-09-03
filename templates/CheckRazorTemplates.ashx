@@ -140,12 +140,12 @@ strong {
 			var isGlobal = match.Groups["global"].Success;
 			if (!(key.StartsWith(@"""") && key.EndsWith(@"""")))
 				{
-					var message = string.Format(@"{0}: {1} must be quoted", match, key);
+					var message = string.Format(@"{0}: Key {1} must be quoted (""{1}"")", match, key);
 					errors.Add(message);
 				}
 			if (isGlobal)
 				{
-					var message = string.Format(@"{0}: Global translation are not supported", match);
+					var message = string.Format(@"{0}: Global translations are not supported", match);
 					errors.Add(message);
 				}
 		}
